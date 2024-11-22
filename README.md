@@ -1,9 +1,5 @@
 # Deployer
 
-<div align="center">
-    <img width="613" alt="banner" src="https://github.com/user-attachments/assets/8fe8c719-746b-4241-b0ff-cf40284ed921">
-</div>
-
 <div align="left">
     <img src="https://img.shields.io/badge/Rust-DDA484?logo=Rust&logoColor=white" />
     <!-- <img src="https://img.shields.io/badge/NodeJS-5FA04E?logo=Node.js&logoColor=white" />
