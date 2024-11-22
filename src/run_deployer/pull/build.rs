@@ -2,7 +2,9 @@
 // The "key-files" are files that are important for the project
 // such as "package.json", "gleam.toml" or "Cargo.toml".
 
+use crate::log;
 use crate::run_deployer::pull::{DateTime, Local};
+use project_trait::{Gleam, Go, Project, Rust};
 use std::process::Command;
 use std::{
     fmt::Display,
@@ -11,7 +13,6 @@ use std::{
     process::ExitStatus,
 };
 use walkdir::{DirEntry, WalkDir};
-use crate::log;
 
 mod project_trait;
 
@@ -19,26 +20,24 @@ enum KeyFile {
     Gleam,
     Rust,
     Go,
-
-    // what if user uses Bun which is also using package.json?
-    // I mean... I should probably consider changing its name, eh?
     NodeJS,
 }
+
+// The filenames of KeyFiles
+// Used in list_directories() and KeyFile::value(&self)
+const NODEJS: &str = "package.json";
+const GLEAM: &str = "gleam.toml";
+const CARGO: &str = "Cargo.toml";
+const GO_MOD: &str = "go.mod";
 
 impl KeyFile {
     fn value(&self) -> &str {
         match self {
-            KeyFile::Gleam => "gleam.toml",
-            KeyFile::Rust => "Cargo.toml",
-            KeyFile::Go => "go.mod",
-            KeyFile::NodeJS => "package.json",
+            KeyFile::NodeJS => NODEJS,
+            KeyFile::Gleam => GLEAM,
+            KeyFile::Rust => CARGO,
+            KeyFile::Go => GO_MOD,
         }
-    }
-    fn cmp(&self, value: KeyFile) -> bool {
-        if self.value() == value.value() {
-            return true;
-        }
-        false
     }
 }
 
@@ -49,44 +48,75 @@ impl Display for KeyFile {
 }
 
 /// Build a service looking at its `KeyFiles`.
-pub fn build(
-    service_path: &Path,
-    build_dir: &Path,
-    service_name: String
-) -> Result<()> {
+pub fn build(service_path: &Path, build_dir: &Path, service_name: String) -> Result<()> {
     let key_file = list_directories(service_path)?;
-    log!("Found a key file ({}) in {}", key_file.1, key_file.0.path().display());
-    if key_file.1.cmp(KeyFile::Rust) {
-        let path = key_file
-            .0
-            .path()
-            .parent()
-            .expect("Failed to get file's parent directory");
-        let status = build_rust(path);
-        log!(
-            "Build command has finished with status: {}",
-            status.expect("Failed to get exit status code")
-        );
+    log!(
+        "Found a key file ({}) in {}",
+        key_file.1,
+        key_file.0.path().display()
+    );
+    let path = key_file
+        .0
+        .path()
+        .parent()
+        .expect("Failed to get file's parent directory");
 
-        let rs_build_path =
-            format!("{}/target/release", path
-                .to_str().expect("Failed to get rust build path"));
+    match key_file.1 {
+        KeyFile::Rust => {
+            let rust = Rust::new();
+            let status = rust.build(path);
 
-        move_build(Path::new(&rs_build_path), build_dir, service_name)?;
-    } else if key_file.1.cmp(KeyFile::Gleam) {
-        todo!();
-    } else if key_file.1.cmp(KeyFile::Go) {
-        todo!();
-    } else if key_file.1.cmp(KeyFile::NodeJS) {
-        todo!();
-    } else {
-        return Err(Error::new(ErrorKind::Other, "Failed to compare KeyFile."));
+            log!(
+                "Build command has finished with status: {}",
+                status.expect("Failed to get exit status code")
+            );
+
+            let rs_build_path = format!(
+                "{}/{}",
+                rust.get_build_dir(),
+                path.to_str().expect("Failed to get rust build path")
+            );
+            move_build(Path::new(&rs_build_path), build_dir, &service_name)?;
+        }
+        KeyFile::Go => {
+            let go = Go::new();
+            let status = go.build(path);
+            log!(
+                "Build command has finished with status: {}",
+                status.expect("Failed to get exit status code")
+            );
+            let go_build_path = format!(
+                "{}/{}",
+                go.get_build_dir(),
+                path.to_str().expect("Failed to get go build path")
+            );
+            move_build(Path::new(&go_build_path), build_dir, &service_name)?;
+        }
+        KeyFile::Gleam => {
+            let gleam = Gleam::new();
+            let status = gleam.build(path);
+            log!(
+                "Build command has finished with status: {}",
+                status.expect("Failed to get exit status code")
+            );
+            let go_build_path = format!(
+                "{}/{}",
+                gleam.get_build_dir(),
+                path.to_str().expect("Failed to get go build path")
+            );
+            move_build(Path::new(&go_build_path), build_dir, &service_name)?;
+        }
+        KeyFile::NodeJS => {
+            // NodeJS backend doesn't compile. You deploy as is.
+            // **unless you deploy frontend**
+            move_build(path, build_dir, &service_name)?;
+        }
     }
     Ok(())
 }
 
-/// Move built project to the specified directory.
-fn move_build(project: &Path, destination: &Path, service_name: String) -> Result<ExitStatus> {
+/// Moves and renames the build.
+fn move_build(project: &Path, destination: &Path, service_name: &str) -> Result<ExitStatus> {
     let tmp = format!("{}/{}", destination.to_str().unwrap(), service_name);
     let destination = Path::new(&tmp);
     if Path::exists(destination) {
@@ -105,21 +135,6 @@ fn move_build(project: &Path, destination: &Path, service_name: String) -> Resul
     cmd.wait()
 }
 
-/// Panics if fails to spawn the CMD.
-#[deprecated(
-    since = "0.2.2",
-    note = "Use structures of projects that implement `Project trait`."
-)]
-fn build_rust(path: &Path) -> Result<ExitStatus> {
-    let mut cmd = Command::new("cargo")
-        .arg("build")
-        .arg("--release")
-        .current_dir(path)
-        .spawn()
-        .expect("Failed to build Rust project");
-    cmd.wait()
-}
-
 /// Search for supported `KeyFiles`.
 fn list_directories(path: &Path) -> Result<(DirEntry, KeyFile)> {
     for entry in WalkDir::new(path).follow_links(true).into_iter() {
@@ -127,9 +142,10 @@ fn list_directories(path: &Path) -> Result<(DirEntry, KeyFile)> {
         if tmp.path().is_file() {
             let file_name = tmp.path().file_name().unwrap().to_str().unwrap();
             match file_name {
-                "package.json" => return Ok((tmp, KeyFile::NodeJS)),
-                "Cargo.toml" => return Ok((tmp, KeyFile::Rust)),
-                "gleam.toml" => return Ok((tmp, KeyFile::Gleam)),
+                NODEJS => return Ok((tmp, KeyFile::NodeJS)),
+                CARGO => return Ok((tmp, KeyFile::Rust)),
+                GLEAM => return Ok((tmp, KeyFile::Gleam)),
+                GO_MOD => return Ok((tmp, KeyFile::Go)),
                 _ => continue,
             }
         }

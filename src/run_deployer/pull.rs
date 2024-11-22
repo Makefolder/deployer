@@ -1,4 +1,5 @@
 use crate::generate_conf::file_struct::{Commit, ConfigFile};
+use crate::log;
 use build::build;
 use chrono::{prelude::DateTime, Local};
 use git2::Repository;
@@ -6,7 +7,6 @@ use reqwest::{Client, Response};
 use std::error::Error;
 use std::{fmt::Display, path::Path};
 use tokio::time::{self, Duration};
-use crate::log;
 
 pub mod build;
 
@@ -40,7 +40,7 @@ impl Display for FolderFormatError {
 /// Also builds "services" that are specified in the config file.
 pub async fn ping<'a>(
     config: &ConfigFile,
-    repository: &RepositoryInfo<'a>
+    repository: &RepositoryInfo<'a>,
 ) -> Result<(), Box<dyn Error>> {
     let client = Client::new();
     let mut last_commit = String::from("");
