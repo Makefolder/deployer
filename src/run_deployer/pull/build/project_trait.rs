@@ -66,24 +66,24 @@ impl<'a> Project for Go<'a> {
 }
 
 // GLEAM
-pub struct Gleam<'a> {
-    build_dir: &'a str,
-}
-
-impl<'a> Gleam<'a> {
-    pub fn new() -> Self {
-        Gleam {
-            build_dir: "build/prod/erlang",
-        }
-    }
-}
-
-impl<'a> Project for Gleam<'a> {
-    fn build(&self, _current_dir: &Path) -> Result<ExitStatus> {
-        todo!()
-    }
-
-    fn get_build_dir(&self) -> &str {
-        self.build_dir
-    }
-}
+//pub struct Gleam<'a> {
+//    build_dir: &'a str,
+//}
+//
+//impl<'a> Gleam<'a> {
+//    pub fn new() -> Self {
+//        Gleam {
+//            build_dir: "build/prod/erlang",
+//        }
+//    }
+//}
+//
+//impl<'a> Project for Gleam<'a> {
+//    fn build(&self, _current_dir: &Path) -> Result<ExitStatus> {
+//        todo!()
+//    }
+//
+//    fn get_build_dir(&self) -> &str {
+//        self.build_dir
+//    }
+//}

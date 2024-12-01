@@ -2,7 +2,7 @@ use crate::generate_conf::file_struct::ConfigFile;
 use serde_json;
 use std::{fs::File, io::Read, path::Path};
 
-pub mod pull;
+mod pull;
 
 use pull::{ping, RepositoryInfo};
 

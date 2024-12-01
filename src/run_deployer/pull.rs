@@ -4,11 +4,11 @@ use build::build;
 use chrono::{prelude::DateTime, Local};
 use git2::Repository;
 use reqwest::{Client, Response};
-use std::error::Error;
-use std::{fmt::Display, path::Path};
+use std::{error::Error, fmt::Display, path::Path};
 use tokio::time::{self, Duration};
 
-pub mod build;
+mod build;
+mod svc;
 
 /// Local struct. Used to pass
 /// these three fields across functions.
@@ -75,6 +75,20 @@ pub async fn ping<'a>(
             //  Put into for s in services
             let build_dir = Path::new(&config.services[0].build_dir);
             build(path, &build_dir, config.services[0].name.to_owned())?;
+
+            let svc_path = Path::new(&config.sys_svc_dir);
+            let status = svc::restart_service(
+                &config.services[0].svc_filename,
+                &svc_path,
+                &config.services[0].svc_file_contents,
+            )?;
+            if !status.success() {
+                log!(
+                    "Failed to restart service {} (status code {}).",
+                    config.services[0].svc_filename,
+                    status.code().unwrap_or(1)
+                );
+            }
         }
         time::sleep(Duration::from_secs(60)).await;
     }

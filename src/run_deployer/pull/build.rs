@@ -4,7 +4,7 @@
 
 use crate::log;
 use crate::run_deployer::pull::{DateTime, Local};
-use project_trait::{Gleam, Go, Project, Rust};
+use project_trait::{Go, Project, Rust};
 use std::process::Command;
 use std::{
     fmt::Display,
@@ -17,24 +17,27 @@ use walkdir::{DirEntry, WalkDir};
 mod project_trait;
 
 enum KeyFile {
-    Gleam,
+    //Gleam,
+    //NodeJS,
+    //Elixir,
     Rust,
     Go,
-    NodeJS,
 }
 
 // The filenames of KeyFiles
 // Used in list_directories() and KeyFile::value(&self)
-const NODEJS: &str = "package.json";
-const GLEAM: &str = "gleam.toml";
+//const NODEJS: &str = "package.json";
+//const GLEAM: &str = "gleam.toml";
+//const ELIXIR: &str = "TODO";
 const CARGO: &str = "Cargo.toml";
 const GO_MOD: &str = "go.mod";
 
 impl KeyFile {
     fn value(&self) -> &str {
         match self {
-            KeyFile::NodeJS => NODEJS,
-            KeyFile::Gleam => GLEAM,
+            //KeyFile::Elixir => ELIXIR,
+            //KeyFile::NodeJS => NODEJS,
+            //KeyFile::Gleam => GLEAM,
             KeyFile::Rust => CARGO,
             KeyFile::Go => GO_MOD,
         }
@@ -73,8 +76,8 @@ pub fn build(service_path: &Path, build_dir: &Path, service_name: String) -> Res
 
             let rs_build_path = format!(
                 "{}/{}",
-                rust.get_build_dir(),
-                path.to_str().expect("Failed to get rust build path")
+                path.to_str().expect("Failed to get rust build path"),
+                rust.get_build_dir()
             );
             move_build(Path::new(&rs_build_path), build_dir, &service_name)?;
         }
@@ -82,35 +85,35 @@ pub fn build(service_path: &Path, build_dir: &Path, service_name: String) -> Res
             let go = Go::new();
             let status = go.build(path);
             log!(
-                "Build command has finished with status: {}",
+                "Build command has finished with {}",
                 status.expect("Failed to get exit status code")
             );
             let go_build_path = format!(
                 "{}/{}",
-                go.get_build_dir(),
-                path.to_str().expect("Failed to get go build path")
+                path.to_str().expect("Failed to get go build path"),
+                go.get_build_dir()
             );
             move_build(Path::new(&go_build_path), build_dir, &service_name)?;
-        }
-        KeyFile::Gleam => {
-            let gleam = Gleam::new();
-            let status = gleam.build(path);
-            log!(
-                "Build command has finished with status: {}",
-                status.expect("Failed to get exit status code")
-            );
-            let go_build_path = format!(
-                "{}/{}",
-                gleam.get_build_dir(),
-                path.to_str().expect("Failed to get go build path")
-            );
-            move_build(Path::new(&go_build_path), build_dir, &service_name)?;
-        }
-        KeyFile::NodeJS => {
-            // NodeJS backend doesn't compile. You deploy as is.
-            // **unless you deploy frontend**
-            move_build(path, build_dir, &service_name)?;
-        }
+        } //KeyFile::Gleam => {
+          //    let gleam = Gleam::new();
+          //    let status = gleam.build(path);
+          //    log!(
+          //        "Build command has finished with status: {}",
+          //        status.expect("Failed to get exit status code")
+          //    );
+          //    let go_build_path = format!(
+          //        "{}/{}",
+          //        gleam.get_build_dir(),
+          //        path.to_str().expect("Failed to get go build path")
+          //    );
+          //    move_build(Path::new(&go_build_path), build_dir, &service_name)?;
+          //}
+          //KeyFile::Elixir => todo!(),
+          //KeyFile::NodeJS => {
+          //    // NodeJS backend doesn't compile. You deploy as is.
+          //    // **unless you deploy frontend**
+          //    move_build(path, build_dir, &service_name)?;
+          //}
     }
     Ok(())
 }
@@ -142,9 +145,10 @@ fn list_directories(path: &Path) -> Result<(DirEntry, KeyFile)> {
         if tmp.path().is_file() {
             let file_name = tmp.path().file_name().unwrap().to_str().unwrap();
             match file_name {
-                NODEJS => return Ok((tmp, KeyFile::NodeJS)),
+                //NODEJS => return Ok((tmp, KeyFile::NodeJS)),
+                //GLEAM => return Ok((tmp, KeyFile::Gleam)),
+                //ELIXIR => return Ok((tmp, KeyFile::Elixir)),
                 CARGO => return Ok((tmp, KeyFile::Rust)),
-                GLEAM => return Ok((tmp, KeyFile::Gleam)),
                 GO_MOD => return Ok((tmp, KeyFile::Go)),
                 _ => continue,
             }

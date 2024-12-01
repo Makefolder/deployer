@@ -3,4 +3,6 @@ Notes.txt
 deployer-config.jsonc
 .DS_Store
 .idea
+.nvimlog
+.vscode
 get_total_nums.sh
