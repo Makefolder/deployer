@@ -28,10 +28,10 @@ pub fn restart_service(
                 _ = file.write(b"\n");
             }
             let mut cmd = Command::new("systemctl")
-                .arg("restart")
+                .arg("start")
                 .arg(svc_filename)
                 .spawn()
-                .expect("Failed to restart service");
+                .expect("Failed to start service");
             cmd.wait()
         }
         true => {
