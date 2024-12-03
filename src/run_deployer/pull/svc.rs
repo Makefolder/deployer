@@ -19,7 +19,6 @@ pub fn restart_service(
     contents: &[String],
 ) -> Result<ExitStatus> {
     let dir = complete_dir(svc_filename, svc_dir);
-    dbg!("Service file in {}", dir.display());
     match dir.exists() {
         false => {
             let mut file = fs::OpenOptions::new().create(true).append(true).open(dir)?;

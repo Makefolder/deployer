@@ -28,6 +28,14 @@ macro_rules! arg_len {
 macro_rules! log {
     ($($arg:tt)*) => {
         let time: DateTime<Local> = Local::now();
-        println!("[{}] {}", time, format_args!($($arg)*));
+        const FMT: &str = "%Y-%m-%d %H:%M:%S";
+        println!("[{}] {}", time.format(FMT).to_string(), format_args!($($arg)*));
     }
+}
+
+#[macro_export]
+macro_rules! trust_me {
+    ($x:expr) => {
+        unsafe { x }
+    };
 }

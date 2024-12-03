@@ -40,9 +40,10 @@ This is an example configuration `jsonc` file.
 Note that if project already **is** in the `build_dir`, it
 would `rm -rf` that project.
 
-```json
+```jsonc
 {
-  "repository": "github.com/Makefolder/deployer",
+  // the "https://" part is optional
+  "repository": "https://github.com/Makefolder/deployer",
   "branch": "main",
   "token": "tokentokenmysweettoken",
   "pull_dir": "/usr/meykfolduh/var/my-pulls",
@@ -51,8 +52,14 @@ would `rm -rf` that project.
     {
       "name": "service-name",
       "svc_filename": "svc-name",
-      "root_dir": "/usr/meykfolduh/var/my-pulls/service1",
-      "build_dir": "/usr/meykfolduh/var/production"
+      "build_dir": "/usr/meykfolduh/var/production",
+      "svc_file_contents": [
+        "[Unit]",
+        "Description=Your service description.",
+        "",
+        "[Service]",
+        "And so on..."
+      ]
     }
   ]
 }

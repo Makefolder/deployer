@@ -18,7 +18,9 @@ pub async fn run(path: &str) {
     if config.token.is_empty() || config.token == "YOUR-GITHUB-TOKEN-HERE" {
         panic!("Github token is not specified!");
     }
-    if config.repository.is_empty() || config.repository == "github.com/your-repository/link" {
+    if config.repository.is_empty()
+        || config.repository == "https://github.com/your-repository/link"
+    {
         panic!("Github repository is not specified!");
     }
     let repository = url_fmt(&config.repository, &config.branch);
@@ -37,7 +39,13 @@ pub async fn run(path: &str) {
 /// Panics if URL is badly formatted.
 fn url_fmt<'a>(url: &'a str, branch: &'a str) -> RepositoryInfo<'a> {
     const INVALID_URL: &str = "Invalid repository URL!";
-    let list: Vec<&str> = url.split('/').collect();
+
+    let list: Vec<&str> = if url.starts_with("https://") {
+        url[8..].split('/').collect()
+    } else {
+        url.split('/').collect()
+    };
+
     if list.len() != 3 {
         panic!("{}", INVALID_URL);
     }

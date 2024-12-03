@@ -2,7 +2,8 @@ use crate::generate_conf::file_struct::{Commit, ConfigFile};
 use crate::log;
 use build::build;
 use chrono::{prelude::DateTime, Local};
-use git2::Repository;
+use git2::build::RepoBuilder;
+use git2::{Cred, FetchOptions, RemoteCallbacks, Repository};
 use reqwest::{Client, Response};
 use std::{error::Error, fmt::Display, path::Path};
 use tokio::time::{self, Duration};
@@ -67,27 +68,28 @@ pub async fn ping<'a>(
                 "https://github.com/{}/{}.git",
                 repository.author, repository.name
             );
+
             let pull_dir = format!("{}/{}", config.pull_dir, get_time());
-            let pull_path = pull_repository(&url, &pull_dir)?;
+            let pull_path = pull_repository(&url, &pull_dir, &config.token)?;
             let path = Path::new(&pull_path);
 
-            // todo: change hardcoded.
-            //  Put into for s in services
-            let build_dir = Path::new(&config.services[0].build_dir);
-            build(path, &build_dir, config.services[0].name.to_owned())?;
+            for i in 0..config.services.len() {
+                let build_dir = Path::new(&config.services[i].build_dir);
+                build(path, &build_dir, config.services[i].name.to_owned())?;
 
-            let svc_path = Path::new(&config.sys_svc_dir);
-            let status = svc::restart_service(
-                &config.services[0].svc_filename,
-                &svc_path,
-                &config.services[0].svc_file_contents,
-            )?;
-            if !status.success() {
-                log!(
-                    "Failed to restart service {} (status code {}).",
-                    config.services[0].svc_filename,
-                    status.code().unwrap_or(1)
-                );
+                let svc_path = Path::new(&config.sys_svc_dir);
+                let status = svc::restart_service(
+                    &config.services[i].svc_filename,
+                    &svc_path,
+                    &config.services[i].svc_file_contents,
+                )?;
+                if !status.success() {
+                    log!(
+                        "Failed to restart service {} (status code {}).",
+                        config.services[i].svc_filename,
+                        status.code().unwrap_or(1)
+                    );
+                }
             }
         }
         time::sleep(Duration::from_secs(60)).await;
@@ -105,9 +107,21 @@ async fn send_request(url: &str, token: &str, client: &Client) -> Result<Respons
     Ok(response)
 }
 
-fn pull_repository(url: &str, root_dir: &str) -> Result<String, Box<dyn Error>> {
+fn pull_repository(url: &str, root_dir: &str, token: &str) -> Result<String, Box<dyn Error>> {
+    let root_path: &Path = Path::new(root_dir);
+
+    // Auth callback
+    let mut callback = RemoteCallbacks::new();
+    callback.credentials(move |_, _, _| Cred::userpass_plaintext("x-access-token", token));
+
+    let mut rb = RepoBuilder::new();
+    let mut fetch_options: FetchOptions<'_> = FetchOptions::new();
+
+    fetch_options.remote_callbacks(callback);
+    rb.fetch_options(fetch_options);
+
     // Pull repository
-    match Repository::clone(url, root_dir) {
+    match rb.clone(url, root_path) {
         Ok(_) => {
             log!("Fetched from remote branch to {}", root_dir);
             Ok(root_dir.to_string())

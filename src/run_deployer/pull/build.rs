@@ -82,7 +82,7 @@ pub fn build(service_path: &Path, build_dir: &Path, service_name: String) -> Res
             move_build(Path::new(&rs_build_path), build_dir, &service_name)?;
         }
         KeyFile::Go => {
-            let go = Go::new();
+            let /* me */ go /* it's 12:30AM already :( */ = Go::new();
             let status = go.build(path);
             log!(
                 "Build command has finished with {}",
@@ -93,6 +93,7 @@ pub fn build(service_path: &Path, build_dir: &Path, service_name: String) -> Res
                 path.to_str().expect("Failed to get go build path"),
                 go.get_build_dir()
             );
+            dbg!("{}", &go_build_path);
             move_build(Path::new(&go_build_path), build_dir, &service_name)?;
         } //KeyFile::Gleam => {
           //    let gleam = Gleam::new();
