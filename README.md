@@ -51,7 +51,7 @@ would `rm -rf` that project.
   "services": [
     {
       "name": "service-name",
-      "svc_filename": "svc-name",
+      "svc_filename": "svc-name.service",
       "build_dir": "/usr/meykfolduh/var/production",
       "svc_file_contents": [
         "[Unit]",

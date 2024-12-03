@@ -1,4 +1,5 @@
-use std::io::Result;
+use std::fs::OpenOptions;
+use std::io::{BufRead, BufReader, Result};
 use std::path::Path;
 use std::process::{Command, ExitStatus};
 
@@ -46,6 +47,20 @@ impl<'a> Go<'a> {
     pub fn new() -> Self {
         // it builds in root dir of a project
         Go { build_dir: "" }
+    }
+
+    pub fn get_build_name(&self, key_file: &Path) -> Result<Option<String>> {
+        let fd = OpenOptions::new().read(true).open(key_file)?;
+        let reader = BufReader::new(fd);
+
+        for line in reader.lines() {
+            let line = line?;
+            if let Some(module_name) = line.strip_prefix("module ") {
+                return Ok(Some(module_name.trim().to_string()));
+            }
+        }
+
+        Ok(None)
     }
 }
 

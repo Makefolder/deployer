@@ -84,15 +84,30 @@ pub fn build(service_path: &Path, build_dir: &Path, service_name: String) -> Res
         KeyFile::Go => {
             let /* me */ go /* it's 12:30AM already :( */ = Go::new();
             let status = go.build(path);
+            let project_name = go
+                .get_build_name(key_file.0.path())
+                .expect("Failed to find Go module name");
+
             log!(
                 "Build command has finished with {}",
                 status.expect("Failed to get exit status code")
             );
-            let go_build_path = format!(
-                "{}/{}",
-                path.to_str().expect("Failed to get go build path"),
-                go.get_build_dir()
-            );
+
+            let go_build_path = if let Some(module) = project_name {
+                format!(
+                    "{}/{}{}",
+                    path.to_str().expect("Failed to get Go build path"),
+                    go.get_build_dir(),
+                    module
+                )
+            } else {
+                format!(
+                    "{}/{}",
+                    path.to_str().expect("Failed to get Go build path"),
+                    go.get_build_dir()
+                )
+            };
+
             dbg!("{}", &go_build_path);
             move_build(Path::new(&go_build_path), build_dir, &service_name)?;
         } //KeyFile::Gleam => {
