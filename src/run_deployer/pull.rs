@@ -5,6 +5,7 @@ use chrono::{prelude::DateTime, Local};
 use git2::build::RepoBuilder;
 use git2::{Cred, FetchOptions, RemoteCallbacks, Repository};
 use reqwest::{Client, Response};
+use std::path::PathBuf;
 use std::{error::Error, fmt::Display, path::Path};
 use tokio::time::{self, Duration};
 
@@ -75,24 +76,47 @@ pub async fn ping<'a>(
 
             for i in 0..config.services.len() {
                 let build_dir = Path::new(&config.services[i].build_dir);
-                build(path, &build_dir, config.services[i].name.to_owned())?;
+                let custom_dir = config.services[i].custom_dir.as_ref();
+
+                build(
+                    fmt_dir(path, custom_dir).as_path(),
+                    &build_dir,
+                    config.services[i].name.to_owned(),
+                )?;
 
                 let svc_path = Path::new(&config.sys_svc_dir);
+
                 let status = svc::restart_service(
                     &config.services[i].svc_filename,
                     &svc_path,
                     &config.services[i].svc_file_contents,
-                )?;
-                if !status.success() {
+                );
+
+                if let Ok(s) = status {
+                    if !s.success() {
+                        log!(
+                            "Failed to restart service {} (status code {}).",
+                            config.services[i].svc_filename,
+                            s.code().unwrap_or(1)
+                        );
+                    }
+                } else {
                     log!(
-                        "Failed to restart service {} (status code {}).",
-                        config.services[i].svc_filename,
-                        status.code().unwrap_or(1)
+                        "Failed to restart service {}.",
+                        config.services[i].svc_filename
                     );
                 }
             }
         }
         time::sleep(Duration::from_secs(60)).await;
+    }
+}
+
+fn fmt_dir(path: &Path, dir: Option<&String>) -> PathBuf {
+    let p = PathBuf::from(path);
+    match dir {
+        Some(d) => p.join(d),
+        None => p,
     }
 }
 

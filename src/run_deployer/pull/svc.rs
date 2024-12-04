@@ -2,9 +2,11 @@
 // in Ubuntu those are located in
 // /lib/systemd/system/
 
+use crate::log;
+use chrono::{prelude::DateTime, Local};
 use std::{
     fs,
-    io::{Result, Write},
+    io::{ErrorKind, Result, Write},
     path::{Path, PathBuf},
     process::{Command, ExitStatus},
 };
@@ -18,7 +20,7 @@ pub fn restart_service(
     svc_dir: &Path,
     contents: &[String],
 ) -> Result<ExitStatus> {
-    let dir = complete_dir(svc_filename, svc_dir);
+    let dir = complete_dir(svc_dir, svc_filename);
     match dir.exists() {
         false => {
             let mut file = fs::OpenOptions::new().create(true).append(true).open(dir)?;
@@ -26,25 +28,33 @@ pub fn restart_service(
                 _ = file.write(&s.as_bytes());
                 _ = file.write(b"\n");
             }
-            let mut cmd = Command::new("systemctl")
+            let cmd = Command::new("systemctl")
                 .arg("start")
                 .arg(svc_filename)
-                .spawn()
-                .expect("Failed to start service");
-            cmd.wait()
+                .spawn();
+            if let Ok(mut c) = cmd {
+                c.wait()
+            } else {
+                log!("Failed to use `systemctl` command.");
+                Err(ErrorKind::Unsupported.into())
+            }
         }
         true => {
-            let mut cmd = Command::new("systemctl")
+            let cmd = Command::new("systemctl")
                 .arg("restart")
                 .arg(svc_filename)
-                .spawn()
-                .expect("Failed to restart service");
-            cmd.wait()
+                .spawn();
+            if let Ok(mut c) = cmd {
+                c.wait()
+            } else {
+                log!("Failed to use `systemctl` command.");
+                Err(ErrorKind::Unsupported.into())
+            }
         }
     }
 }
 
-fn complete_dir(svc_filename: &str, svc_dir: &Path) -> PathBuf {
+fn complete_dir(svc_dir: &Path, svc_filename: &str) -> PathBuf {
     let dir_str = svc_dir.to_str().unwrap();
     let assembled = format!("{}/{}", dir_str, svc_filename);
     PathBuf::from(assembled)

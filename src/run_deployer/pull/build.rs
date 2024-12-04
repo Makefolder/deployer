@@ -74,11 +74,8 @@ pub fn build(service_path: &Path, build_dir: &Path, service_name: String) -> Res
                 status.expect("Failed to get exit status code")
             );
 
-            let rs_build_path = format!(
-                "{}/{}",
-                path.to_str().expect("Failed to get rust build path"),
-                rust.get_build_dir()
-            );
+            let p = path.to_str().expect("Failed to get rust build path");
+            let rs_build_path = format!("{}/{}", p, rust.get_build_dir());
             move_build(Path::new(&rs_build_path), build_dir, &service_name)?;
         }
         KeyFile::Go => {
@@ -108,7 +105,6 @@ pub fn build(service_path: &Path, build_dir: &Path, service_name: String) -> Res
                 )
             };
 
-            dbg!("{}", &go_build_path);
             move_build(Path::new(&go_build_path), build_dir, &service_name)?;
         } //KeyFile::Gleam => {
           //    let gleam = Gleam::new();

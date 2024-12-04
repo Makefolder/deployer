@@ -50,12 +50,31 @@ would `rm -rf` that project.
   "sys_svc_dir": "/lib/systemd/system",
   "services": [
     {
-      "name": "service-name",
-      "svc_filename": "svc-name.service",
+      "name": "backend",
+      "svc_filename": "backend.service",
       "build_dir": "/usr/meykfolduh/var/production",
+      // What if your project has multiple backends/main files
+      // such as micro-services. Those are located on different
+      // directories.
+      // Example: my-repo/backend/v2
+      "custom_dir": "backend/v2", // nullable
       "svc_file_contents": [
         "[Unit]",
         "Description=Your service description.",
+        "",
+        "[Service]",
+        "And so on..."
+      ]
+    },
+    {
+      "name": "backend",
+      "svc_filename": "backend.service",
+      "build_dir": "/usr/meykfolduh/var/production",
+      // my-repo/file-server
+      "custom_dir": "file-server",
+      "svc_file_contents": [
+        "[Unit]",
+        "Description=Some FS description.",
         "",
         "[Service]",
         "And so on..."

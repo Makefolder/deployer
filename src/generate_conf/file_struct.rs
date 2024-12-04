@@ -10,6 +10,7 @@ pub struct Service {
     pub name: String,
     pub svc_filename: String,
     pub build_dir: String,
+    pub custom_dir: Option<String>,
     pub svc_file_contents: Vec<String>,
 }
 
@@ -29,6 +30,7 @@ impl Default for Service {
             name: "service-name".to_owned(),
             svc_filename: "service-filename.service".to_owned(),
             build_dir: "/var/www/my_service".to_owned(),
+            custom_dir: None,
             svc_file_contents: vec!["[Unit]".to_owned(), "Description=Your desc".to_owned()],
         }
     }
