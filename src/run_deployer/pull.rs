@@ -20,6 +20,13 @@ pub struct RepositoryInfo<'a> {
     pub name: &'a str,
 }
 
+struct ServiceInfo<'a> {
+    pub name: &'a str,
+    pub filename: &'a str,
+    pub sys_dir: &'a str,
+    pub file_contents: &'a [String],
+}
+
 #[derive(Debug)]
 pub enum FolderFormatError {
     FailedToFormat,
@@ -64,54 +71,74 @@ pub async fn ping<'a>(
 
         // Check for new commits
         if last_commit != response.sha {
-            last_commit = response.sha.clone();
-            let url = format!(
-                "https://github.com/{}/{}.git",
-                repository.author, repository.name
-            );
-
-            let pull_dir = format!("{}/{}", config.pull_dir, get_time());
-            let pull_path = pull_repository(&url, &pull_dir, &config.token)?;
-            let path = Path::new(&pull_path);
-
-            for i in 0..config.services.len() {
-                let build_dir = Path::new(&config.services[i].build_dir);
-                let custom_dir = config.services[i].custom_dir.as_ref();
-
-                build(
-                    fmt_dir(path, custom_dir).as_path(),
-                    &build_dir,
-                    config.services[i].name.to_owned(),
-                )?;
-
-                let svc_path = Path::new(&config.sys_svc_dir);
-
-                let status = svc::restart_service(
-                    &config.services[i].svc_filename,
-                    &svc_path,
-                    &config.services[i].svc_file_contents,
-                );
-
-                if let Ok(s) = status {
-                    if !s.success() {
-                        log!(
-                            "Failed to restart service {} (status code {}).",
-                            config.services[i].svc_filename,
-                            s.code().unwrap_or(1)
-                        );
-                    }
-                } else {
-                    log!(
-                        "Failed to restart service {}.",
-                        config.services[i].svc_filename
-                    );
-                }
-            }
+            pull_logic(&mut last_commit, config, &response, repository)?;
         }
         time::sleep(Duration::from_secs(60)).await;
     }
 }
 
+/// This huge thing is (basically) core of the program.
+/// This function is where all the stuff going on:
+/// pull, build, service files logic
+fn pull_logic(
+    last_commit: &mut String,
+    config: &ConfigFile,
+    response: &Commit,
+    repository: &RepositoryInfo,
+) -> Result<(), Box<dyn Error>> {
+    last_commit.clear();
+    last_commit.push_str(response.sha.as_str());
+    let url = format!(
+        "https://github.com/{}/{}.git",
+        repository.author, repository.name
+    );
+
+    let pull_dir = format!("{}/{}", config.pull_dir, get_time());
+    let pull_path = pull_repository(&url, &pull_dir, &config.token)?;
+    let path = Path::new(&pull_path);
+
+    for i in 0..config.services.len() {
+        let build_dir = Path::new(&config.services[i].build_dir);
+        let custom_dir = config.services[i].custom_dir.as_ref();
+        let service_path = fmt_dir(path, custom_dir);
+        let service_info = ServiceInfo {
+            filename: &config.services[i].svc_filename,
+            name: &config.services[i].name,
+            sys_dir: &config.sys_svc_dir,
+            file_contents: &config.services[i].svc_file_contents,
+        };
+
+        build_logic(service_path.as_path(), build_dir, &service_info)?;
+    }
+    Ok(())
+}
+
+fn build_logic(
+    service_path: &Path,
+    build_dir: &Path,
+    svc: &ServiceInfo,
+) -> Result<(), Box<dyn Error>> {
+    build(service_path, &build_dir, svc.name)?;
+    let svc_path = Path::new(svc.sys_dir);
+    let status = svc::restart_service(svc.filename, svc_path, svc.file_contents);
+
+    if let Ok(s) = status {
+        if !s.success() {
+            log!(
+                "Failed to restart service {} (status code {}).",
+                svc.filename,
+                s.code().unwrap_or(1)
+            );
+        }
+    } else {
+        log!("Failed to restart service {}.", svc.filename);
+    }
+    Ok(())
+}
+
+// Appends `dir` (the directory with keyfile within project)
+// to base path.
+// Example: micro-services
 fn fmt_dir(path: &Path, dir: Option<&String>) -> PathBuf {
     let p = PathBuf::from(path);
     match dir {

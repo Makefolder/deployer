@@ -51,7 +51,7 @@ impl Display for KeyFile {
 }
 
 /// Build a service looking at its `KeyFiles`.
-pub fn build(service_path: &Path, build_dir: &Path, service_name: String) -> Result<()> {
+pub fn build(service_path: &Path, build_dir: &Path, service_name: &str) -> Result<()> {
     let key_file = list_directories(service_path)?;
     log!(
         "Found a key file ({}) in {}",
@@ -76,7 +76,7 @@ pub fn build(service_path: &Path, build_dir: &Path, service_name: String) -> Res
 
             let p = path.to_str().expect("Failed to get rust build path");
             let rs_build_path = format!("{}/{}", p, rust.get_build_dir());
-            move_build(Path::new(&rs_build_path), build_dir, &service_name)?;
+            move_build(Path::new(&rs_build_path), build_dir, service_name)?;
         }
         KeyFile::Go => {
             let /* me */ go /* it's 12:30AM already :( */ = Go::new();
@@ -105,7 +105,7 @@ pub fn build(service_path: &Path, build_dir: &Path, service_name: String) -> Res
                 )
             };
 
-            move_build(Path::new(&go_build_path), build_dir, &service_name)?;
+            move_build(Path::new(&go_build_path), build_dir, service_name)?;
         } //KeyFile::Gleam => {
           //    let gleam = Gleam::new();
           //    let status = gleam.build(path);
@@ -118,13 +118,13 @@ pub fn build(service_path: &Path, build_dir: &Path, service_name: String) -> Res
           //        gleam.get_build_dir(),
           //        path.to_str().expect("Failed to get go build path")
           //    );
-          //    move_build(Path::new(&go_build_path), build_dir, &service_name)?;
+          //    move_build(Path::new(&go_build_path), build_dir, service_name)?;
           //}
           //KeyFile::Elixir => todo!(),
           //KeyFile::NodeJS => {
           //    // NodeJS backend doesn't compile. You deploy as is.
           //    // **unless you deploy frontend**
-          //    move_build(path, build_dir, &service_name)?;
+          //    move_build(path, build_dir, service_name)?;
           //}
     }
     Ok(())
